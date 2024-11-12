@@ -1,7 +1,7 @@
 from aiogram import types, executor
 import admin
 import logging
-from db import save_user_message, get_user_id
+from db import save_user_message, get_user_id, add_user
 from config import ADMINS
 from loader import dp, bot
 
@@ -10,12 +10,23 @@ logging.basicConfig(format=u'%(filename)s [LINE:%(lineno)d] #%(levelname)-8s [%(
                     )
 
 
-@dp.message_handler(text="/start")
+from aiogram import types
+from loader import dp
+from db import user_exists, add_user  # Import the helper functions
+
+@dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
-    msg = f"Hi {message.from_user.first_name}!"
-    msg += "\nWelcome to Chat Bot\n"
-    msg += "Send me your message and wait for the admin's message."
+    telegram_id = message.from_user.id
+    name = message.from_user.full_name
+    username = message.from_user.username
+
+    if not user_exists(telegram_id):
+        add_user(telegram_id, name, username)
+
+    msg = f"Hi {name}!"
+    msg += "\nSend me your message and wait for the admin's message."
     await message.answer(msg)
+
 
 @dp.message_handler(text="/help")
 async def help_handler(message: types.Message):
