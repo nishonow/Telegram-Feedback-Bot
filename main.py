@@ -1,10 +1,9 @@
-from aiogram import types, Bot, executor, Dispatcher
+from aiogram import types, executor
+import admin
 import logging
-from db import save_user_message, get_user_id, clear_user_messages
-from config import BOT_TOKEN, ADMINS
-
-bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher(bot)
+from db import save_user_message, get_user_id
+from config import ADMINS
+from loader import dp, bot
 
 logging.basicConfig(format=u'%(filename)s [LINE:%(lineno)d] #%(levelname)-8s [%(asctime)s]  %(message)s',
                     level=logging.INFO,
@@ -14,8 +13,8 @@ logging.basicConfig(format=u'%(filename)s [LINE:%(lineno)d] #%(levelname)-8s [%(
 @dp.message_handler(text="/start")
 async def start_handler(message: types.Message):
     msg = f"Hi {message.from_user.first_name}!"
-    msg += "\n\nWelcome to Simple Chat Bot\n"
-    msg += "Send me your message and I will send to admin."
+    msg += "\nWelcome to Chat Bot\n"
+    msg += "Send me your message and wait for the admin's message."
     await message.answer(msg)
 
 @dp.message_handler(text="/help")
@@ -34,15 +33,6 @@ async def reply_handler(message: types.Message):
         await message.reply("Could not send the message. The user might have message forwarding disabled.")
 
 
-@dp.message_handler(user_id=ADMINS, text='/admin')
-async def admin_commands(message: types.Message):
-    await message.answer("/clear - Call this command to clear all data from database")
-
-
-@dp.message_handler(user_id=ADMINS, text='/clear')
-async def clear_db(message: types.Message):
-    clear_user_messages()
-    await message.answer("Database is clear.")
 
 @dp.message_handler(content_types="any")
 async def message_handler(message: types.Message):
