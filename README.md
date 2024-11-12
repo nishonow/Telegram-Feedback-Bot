@@ -1,3 +1,9 @@
-# Simple Livegram Bot
-Simple Livegram bot using Aiogram. 
-You can add more features.
+# Telegram Chat Bot 
+
+# Insturction
+
+1. Download the code
+2. Edit config
+3. Run the code
+
+# More advanced features will be added
