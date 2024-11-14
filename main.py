@@ -82,17 +82,19 @@ async def reply_handler(message: types.Message):
 
 @dp.message_handler(content_types="any")
 async def message_handler(message: types.Message, state: FSMContext):
-    if await state.get_state() is None:
-        if message.text and message.text.startswith("/"):
-            return
+    user_id = message.from_user.id
+    if user_id in ADMINS:
+        pass
+    else:
+        if await state.get_state() is None:
+            if message.text and message.text.startswith("/"):
+                return
 
-        # save_user_message(message.message_id, forwarded_message.message_id, message.from_user.id)
+            # save_user_message(message.message_id, forwarded_message.message_id, message.from_user.id)
 
-
-
-        for admin_id in ADMINS:
-            forwarded_message = await message.forward(admin_id)
-            save_user_message(message.message_id, forwarded_message.message_id, message.from_user.id, admin_id)
+            for admin_id in ADMINS:
+                forwarded_message = await message.forward(admin_id)
+                save_user_message(message.message_id, forwarded_message.message_id, message.from_user.id, admin_id)
 
 
 
