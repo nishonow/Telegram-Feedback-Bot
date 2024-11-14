@@ -11,9 +11,9 @@ admin_key = ReplyKeyboardMarkup(resize_keyboard=True)
 
 # Add buttons to the keyboard
 admin_key.add(KeyboardButton("Broadcast"))
-admin_key.add(KeyboardButton("Statistics"), KeyboardButton("All admins"))
-admin_key.add(KeyboardButton("New admin"), KeyboardButton("Remove admin"))
-admin_key.add(KeyboardButton("Clear message DB"), KeyboardButton("Remove admins"))
+admin_key.add(KeyboardButton("Statistics"))
+#admin_key.add(KeyboardButton("New admin"), KeyboardButton("Remove admin"))
+admin_key.add(KeyboardButton("Clear message DB"))
 
 cancel = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -58,11 +58,11 @@ async def get_users_count(message: types.Message):
 
     await message.answer(f"Total users using this bot: {total_users}")
 
-@dp.message_handler(user_id=ADMINS, text='All admins')
-async def get_users_count(message: types.Message):
-    total_admins = count_admins()
-
-    await message.answer(f"Total number of admins including you is {total_admins}")
+# @dp.message_handler(user_id=ADMINS, text='All admins')
+# async def get_users_count(message: types.Message):
+#     total_admins = count_admins()
+#
+#     await message.answer(f"Total number of admins including you is {total_admins}")
 
 @dp.message_handler(user_id=ADMINS, text="Broadcast")
 async def msg_all(message: types.Message, state: FSMContext):
@@ -91,10 +91,10 @@ async def msg_to_all(message: types.Message, state: FSMContext):
     await message.answer(f"Your message has been sent to all users.\nUsers received: {success}\nUsers not received: {error}")
     await state.finish()
 
-@dp.message_handler(user_id=ADMINS, text='New admin')
-async def add_new_admin(message: types.Message, state: FSMContext):
-    await message.reply("Send me user id whom you want to set as admin. Or /cancel to stop this activity.")
-    await state.set_state('get_id_add')
+# @dp.message_handler(user_id=ADMINS, text='New admin')
+# async def add_new_admin(message: types.Message, state: FSMContext):
+#     await message.reply("Send me user id whom you want to set as admin. Or /cancel to stop this activity.")
+#     await state.set_state('get_id_add')
 
 @dp.message_handler(user_id=ADMINS, text='/cancel', state=["get_id_add", 'get_id_delete'])
 async def add_new_admin(message: types.Message, state: FSMContext):
@@ -114,10 +114,10 @@ async def set_new_admin(message: types.Message, state: FSMContext):
 
 
 
-@dp.message_handler(user_id=ADMINS, text="Remove admin")
-async def delete_admin_handler(message: types.Message, state: FSMContext):
-    await message.reply("Send me the user ID of the admin you want to delete. Ot send /cancel to cancel this activity.")
-    await state.set_state('get_id_delete')
+# @dp.message_handler(user_id=ADMINS, text="Remove admin")
+# async def delete_admin_handler(message: types.Message, state: FSMContext):
+#     await message.reply("Send me the user ID of the admin you want to delete. Ot send /cancel to cancel this activity.")
+#     await state.set_state('get_id_delete')
 
 @dp.message_handler(user_id=ADMINS, state='get_id_delete')
 async def confirm_delete_admin(message: types.Message, state: FSMContext):
@@ -133,11 +133,11 @@ async def confirm_delete_admin(message: types.Message, state: FSMContext):
         await state.finish()
 
 
-@dp.message_handler(user_id=ADMINS, text='Remove admins')
-async def clear_db(message: types.Message):
-    await message.answer(
-        "Your database for admins are going to be cleaned. If you clean database only you will receive users' messages."
-        "Are you sure?", reply_markup=cancel_admin)
+# @dp.message_handler(user_id=ADMINS, text='Remove admins')
+# async def clear_db(message: types.Message):
+#     await message.answer(
+#         "Your database for admins are going to be cleaned. If you clean database only you will receive users' messages."
+#         "Are you sure?", reply_markup=cancel_admin)
 
 @dp.callback_query_handler(text='yesad')
 async def clear_dbb(call: CallbackQuery):

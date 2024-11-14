@@ -4,9 +4,9 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 import admin
 import logging
-from db import save_user_message, get_user_id, add_user, get_all_admins
+from db import save_user_message, get_original_user_id, add_user, get_all_admins, get_msgid_admin, get_message_user_id
 from loader import dp, bot, message_map
-
+from config import ADMINS
 
 logging.basicConfig(format=u'%(filename)s [LINE:%(lineno)d] #%(levelname)-8s [%(asctime)s]  %(message)s',
                     level=logging.INFO,
@@ -59,17 +59,19 @@ async def request_call(message: types.Message):
                                          f"Username: @{message.from_user.username}")
 
 
-@dp.message_handler(user_id=get_all_admins(), is_reply=True, content_types="any")
+@dp.message_handler(user_id=ADMINS, is_reply=True, content_types="any")
 async def reply_handler(message: types.Message):
-    original_user_id = message_map.get(message.reply_to_message.message_id)
-
+    message_id = message.reply_to_message.message_id
+    original_user_id = get_original_user_id(message_id, 5783655428)
+    org_msg_id = get_message_user_id(message_id, 5783655428)
     if original_user_id:
         try:
             await bot.copy_message(
-                chat_id=original_user_id,  # Send to the original user's chat
-                from_chat_id=message.from_user.id,  # Admin's chat
-                message_id=message.message_id,  # The admin's reply message
-                reply_markup=message.reply_markup  # Optional: Include reply markup if needed
+                chat_id=original_user_id,
+                from_chat_id=message.from_user.id,
+                message_id=message.message_id,
+                reply_to_message_id=org_msg_id,
+                reply_markup=message.reply_markup
             )
         except Exception as e:
             await message.reply(f"An error occurred while sending the message: {e}")
@@ -84,15 +86,15 @@ async def message_handler(message: types.Message, state: FSMContext):
         if message.text and message.text.startswith("/"):
             return
 
+        # save_user_message(message.message_id, forwarded_message.message_id, message.from_user.id)
 
-        save_user_message(message.message_id, message.from_user.id)
 
-        admin_ids = get_all_admins()
 
-        for admin_id in admin_ids:
+        for admin_id in ADMINS:
             forwarded_message = await message.forward(admin_id)
+            save_user_message(message.message_id, forwarded_message.message_id, message.from_user.id, admin_id)
 
-            message_map[forwarded_message.message_id] = message.from_user.id
+
 
 
 

@@ -5,8 +5,10 @@ cursor = conn.cursor()
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS user_messages (
-    message_id INTEGER PRIMARY KEY,
-    user_id INTEGER
+    original_message_id INTEGER,  -- The original message ID from the user
+    forwarded_message_id INTEGER,             -- The forwarded message ID in the admin's chat
+    original_user_id INTEGER,
+    admin_id TEXT NOT NULL
 )
 """)
 
@@ -79,13 +81,34 @@ def get_all_user_ids():
 
 
 
-def save_user_message(message_id, user_id):
-    cursor.execute("INSERT OR IGNORE INTO user_messages (message_id, user_id) VALUES (?, ?)", (message_id, user_id))
+def save_user_message(original_message_id, forwarded_message_id, original_user_id, admin_id):
+    cursor.execute('''
+        INSERT INTO user_messages (original_message_id, forwarded_message_id, original_user_id, admin_id)
+        VALUES (?, ?, ?, ?)
+    ''', (original_message_id, forwarded_message_id, original_user_id, admin_id))
     conn.commit()
 
 
-def get_user_id(message_id):
-    cursor.execute("SELECT user_id FROM user_messages WHERE message_id = ?", (message_id,))
+def get_original_user_id(forwarded_message_id, admin_id):
+    cursor.execute('''
+        SELECT original_user_id FROM user_messages 
+        WHERE forwarded_message_id = ? AND admin_id = ?
+    ''', (forwarded_message_id, admin_id))
+    result = cursor.fetchone()
+    return result[0] if result else None
+def get_message_user_id(forwarded_message_id, admin_id):
+    cursor.execute('''
+        SELECT original_message_id FROM user_messages 
+        WHERE forwarded_message_id = ? AND admin_id = ?
+    ''', (forwarded_message_id, admin_id))
+    result = cursor.fetchone()
+    return result[0] if result else None
+
+def get_msgid_admin(adminid):
+    cursor.execute('''
+            SELECT forwarded_message_id FROM user_messages 
+            WHERE admin_id = ?
+        ''', (adminid,))
     result = cursor.fetchone()
     return result[0] if result else None
 
