@@ -12,6 +12,7 @@ admin_key = ReplyKeyboardMarkup(resize_keyboard=True)
 # Add buttons to the keyboard
 admin_key.add(KeyboardButton("Broadcast"))
 admin_key.add(KeyboardButton("Statistics"))
+admin_key.add(KeyboardButton("Send by ID"))
 #admin_key.add(KeyboardButton("New admin"), KeyboardButton("Remove admin"))
 admin_key.add(KeyboardButton("Clear message DB"))
 
@@ -70,7 +71,7 @@ async def msg_all(message: types.Message, state: FSMContext):
     await state.set_state('msg_all')
 
 @dp.callback_query_handler(text='no', state='msg_all')
-async def clear_dbb(call: CallbackQuery, state: FSMContext):
+async def no_msg_all(call: CallbackQuery, state: FSMContext):
     await call.message.edit_text("The progress has been canceled.")
     await state.finish()
 
@@ -90,6 +91,44 @@ async def msg_to_all(message: types.Message, state: FSMContext):
             error += 1
     await message.answer(f"Your message has been sent to all users.\nUsers received: {success}\nUsers not received: {error}")
     await state.finish()
+
+@dp.message_handler(user_id=ADMINS, text='Send by ID')
+async def msg_to_id(message: types.Message, state: FSMContext):
+    await message.answer("Send me the ID of the user whom you want to send message.", reply_markup=cancel)
+    await state.set_state('get_id_user')
+
+@dp.callback_query_handler(text='no', state=['get_id_user', 'get_id_msg'])
+async def no_msg_id(call: CallbackQuery, state: FSMContext):
+    await call.message.edit_text("The progress has been canceled.")
+    await state.finish()
+
+@dp.message_handler(user_id=ADMINS, state='get_id_user')
+async def get_id_msg(message: types.Message, state: FSMContext):
+    await message.bot.edit_message_reply_markup(
+        chat_id=message.chat.id,
+        message_id=message.message_id - 1  # Assuming the previous message is the one with the cancel button
+    )
+    id = message.text
+    await state.update_data(id=id)
+    await message.answer("Send me your messasge.", reply_markup=cancel)
+    await state.set_state('get_id_msg')
+
+@dp.callback_query_handler(text='no', state='get_id_user')
+async def no_msg_id(call: CallbackQuery, state: FSMContext):
+    await call.message.edit_text("The progress has been canceled.")
+    await state.finish()
+
+@dp.message_handler(state="get_id_msg", content_types='any')
+async def msg_to_id(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    id = data.get('id')
+    try:
+        await bot.copy_message(id, message.from_user.id, message.message_id)
+        await message.answer("Your message sent!")
+        await state.finish()
+    except:
+        await message.answer("Unable to send message sorry!")
+        await state.finish()
 
 # @dp.message_handler(user_id=ADMINS, text='New admin')
 # async def add_new_admin(message: types.Message, state: FSMContext):

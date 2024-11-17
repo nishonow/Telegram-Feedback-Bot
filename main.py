@@ -52,11 +52,12 @@ async def help_handler(message: types.Message):
 @dp.message_handler(text="Request a call")
 async def request_call(message: types.Message):
     await message.answer("Your request for a call has been sent to admins. Wait for the call.")
-    admins = get_all_admins()
-    for admin_id in admins:
+
+    for admin_id in ADMINS:
         await bot.send_message(admin_id, f"New call request from:\n"
                                          f"Name: {message.from_user.first_name}\n"
-                                         f"Username: @{message.from_user.username}")
+                                         f"Username: @{message.from_user.username}"
+                                         f"\nID: {message.from_user.id}")
 
 
 @dp.message_handler(user_id=ADMINS, is_reply=True, content_types="any")
