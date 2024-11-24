@@ -1,7 +1,7 @@
 from aiogram import types, Bot, executor, Dispatcher
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from aiogram.dispatcher import FSMContext
-
+import asyncio
 from config import BOT_TOKEN, ADMINS
 from db import clear_user_messages, count_users, add_admin, admin_exists, clear_admins, delete_admin, count_admins, \
     get_all_user_ids
@@ -75,6 +75,8 @@ async def no_msg_all(call: CallbackQuery, state: FSMContext):
     await call.message.edit_text("The progress has been canceled.")
     await state.finish()
 
+
+
 @dp.message_handler(state='msg_all', content_types='any')
 async def msg_to_all(message: types.Message, state: FSMContext):
     total_users_id = get_all_user_ids()
@@ -82,15 +84,22 @@ async def msg_to_all(message: types.Message, state: FSMContext):
     from_chat = message.from_user.id
     success = 0
     error = 0
-    for id in total_users_id:
+
+    for idx, user_id in enumerate(total_users_id):
         try:
-            await bot.copy_message(id, from_chat, msg_id)
+            await bot.copy_message(user_id, from_chat, msg_id)
             success += 1
 
-        except:
+            # Add a delay every 30 messages
+            if idx % 30 == 0:
+                await asyncio.sleep(1)
+
+        except Exception:
             error += 1
+
     await message.answer(f"Your message has been sent to all users.\nUsers received: {success}\nUsers not received: {error}")
     await state.finish()
+
 
 @dp.message_handler(user_id=ADMINS, text='Send by ID')
 async def msg_to_id(message: types.Message, state: FSMContext):
