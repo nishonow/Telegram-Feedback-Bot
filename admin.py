@@ -37,7 +37,7 @@ cancel_admin = InlineKeyboardMarkup(
 
 @dp.message_handler(user_id=ADMINS, text='/admin')
 async def admin_commands(message: types.Message):
-    await message.answer("welcome admin choose", reply_markup=admin_key)
+    await message.answer("Welcome admin, what would you like to do?", reply_markup=admin_key)
 
 
 @dp.message_handler(user_id=ADMINS, text='Clear message DB')
