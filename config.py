@@ -1,2 +1,1 @@
 BOT_TOKEN="token"
-ADMINS=[5783655428]
