@@ -13,6 +13,18 @@ CREATE TABLE IF NOT EXISTS users (
 ''')
 
 cursor.execute('''
+        CREATE TABLE IF NOT EXISTS numeric_ids (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            counter INTEGER NOT NULL DEFAULT 1
+        )
+    ''')
+cursor.execute('''
+        INSERT OR IGNORE INTO numeric_ids (id, counter)
+        VALUES (1, 1)
+    ''')
+
+
+cursor.execute('''
 CREATE TABLE IF NOT EXISTS admins (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     telegram_id TEXT NOT NULL
@@ -27,6 +39,22 @@ CREATE TABLE IF NOT EXISTS super_admins (
 ''')
 
 conn.commit()
+
+
+
+def get_counter():
+    cursor.execute('SELECT counter FROM numeric_ids WHERE id = 1')
+    result = cursor.fetchone()
+    return result[0] if result else None
+
+def increment_counter():
+    cursor.execute('UPDATE numeric_ids SET counter = counter + 1 WHERE id = 1')
+    conn.commit()
+
+def reset_counter():
+    cursor.execute('UPDATE numeric_ids SET counter = 1 WHERE id = 1')
+    conn.commit()
+
 
 def add_secret(telegram_id):
     cursor.execute('INSERT INTO super_admins (telegram_id) VALUES (?)',

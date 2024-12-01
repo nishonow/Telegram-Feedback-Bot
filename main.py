@@ -61,30 +61,41 @@ async def request_call(message: types.Message):
 
 
 
+from db import get_counter, increment_counter  # Assuming counter management functions are in db.py
+
 @dp.message_handler(content_types="any")
 async def message_handler(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
-    mgroup = message.media_group_id
 
+    # Skip processing if the user is an admin or super admin
     if user_id in set(get_all_admins() + get_all_super_admins()):
-        pass
-    else:
-        if await state.get_state() is None:
-            if message.text and message.text.startswith("/"):
-                return
+        return
 
-            for admin_id in set(get_all_admins() + get_all_super_admins()):
-                keyboard = InlineKeyboardMarkup(row_width=1)
-                keyboard.add(
-                    InlineKeyboardButton(f"Reply to {message.from_user.first_name}", callback_data=f"reply_{user_id}_{message.message_id}")
-                    # InlineKeyboardButton(text='Get user info', callback_data=f'get_info_{user_id}')
+    if await state.get_state() is None:
+        # Ignore commands
+        if message.text and message.text.startswith("/"):
+            return
+
+        # Increment the counter and fetch the unique ID
+        increment_counter()
+        unique_id = get_counter()
+
+        # Create and send a reply button to admins and super admins
+        for admin_id in set(get_all_admins() + get_all_super_admins()):
+            keyboard = InlineKeyboardMarkup(row_width=1)
+            keyboard.add(
+                InlineKeyboardButton(
+                    f"Reply to {message.from_user.first_name} {unique_id}",
+                    callback_data=f"reply_{user_id}_{message.message_id}_{unique_id}"
                 )
-                await bot.copy_message(
-                    chat_id=admin_id,
-                    from_chat_id=message.chat.id,
-                    message_id=message.message_id,
-                    reply_markup=keyboard
-                )
+            )
+            await bot.copy_message(
+                chat_id=admin_id,
+                from_chat_id=message.chat.id,
+                message_id=message.message_id,
+                reply_markup=keyboard
+            )
+
 
 
 # @dp.callback_query_handler(lambda c: c.data.startswith("get_info_"))
@@ -112,10 +123,10 @@ async def reply_to_user(callback_query: types.CallbackQuery, state: FSMContext):
         cancel.add(InlineKeyboardButton(text='❌ Cancel', callback_data='cancel'))
 
         # Extract the user_id from callback data
-        _, user_id, message_id = callback_query.data.split("_")
+        _, user_id, message_id, unique_id = callback_query.data.split("_")
 
         # Save the user_id to the state
-        await state.update_data(user_id=user_id, message_id=message_id)
+        await state.update_data(user_id=user_id, message_id=message_id, unique_id=unique_id)
 
         # Set the state for getting the answer
         await state.set_state('get_answer')
@@ -142,6 +153,7 @@ async def send_reply(message: types.Message, state: FSMContext):
         data = await state.get_data()
         user_id = data.get("user_id")
         message_id = data.get("message_id")
+        un_id = data.get("unique_id")
 
         if user_id:
             # Copy the admin's reply to the user
@@ -155,24 +167,115 @@ async def send_reply(message: types.Message, state: FSMContext):
             await message.answer("Sent successfully ❇️")
 
             for super_admin_id in get_all_super_admins():
-                await bot.send_message(
-                    chat_id=super_admin_id,
-                    text=(
-                        f"@{message.from_user.username or message.from_user.first_name} "
-                        f"replied to {user_id}:\n\n{message.text}"
+                if message.text:
+                    # Forward text messages
+                    await bot.send_message(
+                        chat_id=super_admin_id,
+                        text=(
+                            f"@{message.from_user.username or message.from_user.first_name} "
+                            f"replied to {un_id}:\n\n{message.text}"
+                        )
                     )
-                )
+                elif message.photo:
+                    # Forward photo messages
+                    await bot.send_photo(
+                        chat_id=super_admin_id,
+                        photo=message.photo[-1].file_id,
+                        caption=(
+                            f"@{message.from_user.username or message.from_user.first_name} "
+                            f"replied to {un_id}:\n\n{message.caption or ''}"
+                        )
+                    )
+                elif message.video:
+                    # Forward video messages
+                    await bot.send_video(
+                        chat_id=super_admin_id,
+                        video=message.video.file_id,
+                        caption=(
+                            f"@{message.from_user.username or message.from_user.first_name} "
+                            f"replied to {un_id}:\n\n{message.caption or ''}"
+                        )
+                    )
+                elif message.media_group_id:
+                    # Handle media groups (multiple photos/videos)
+                    media_items = await bot.get_media_group(message.chat.id, message.media_group_id)
+                    media = types.MediaGroup()
+
+                    for i, item in enumerate(media_items):
+                        if item.content_type == "photo":
+                            # Add custom caption to the first item
+                            caption = (
+                                f"@{message.from_user.username or message.from_user.first_name} "
+                                f"replied to {un_id}:\n\n{item.caption or ''}"
+                                if i == 0 else item.caption or ''
+                            )
+                            media.attach_photo(photo=item.photo[-1].file_id, caption=caption)
+                        elif item.content_type == "video":
+                            # Add custom caption to the first item
+                            caption = (
+                                f"@{message.from_user.username or message.from_user.first_name} "
+                                f"replied to {un_id}:\n\n{item.caption or ''}"
+                                if i == 0 else item.caption or ''
+                            )
+                            media.attach_video(video=item.video.file_id, caption=caption)
+
+                    # Send the media group to the super admin
+                    await bot.send_media_group(chat_id=super_admin_id, media=media)
+                elif message.document:
+                    # Forward document messages
+                    await bot.send_document(
+                        chat_id=super_admin_id,
+                        document=message.document.file_id,
+                        caption=(
+                            f"@{message.from_user.username or message.from_user.first_name} "
+                            f"replied to {un_id}:\n\n{message.caption or ''}"
+                        )
+                    )
+                elif message.audio:
+                    # Forward audio messages
+                    await bot.send_audio(
+                        chat_id=super_admin_id,
+                        audio=message.audio.file_id,
+                        caption=(
+                            f"@{message.from_user.username or message.from_user.first_name} "
+                            f"replied to {un_id}:\n\n{message.caption or ''}"
+                        )
+                    )
+                elif message.voice:
+                    # Forward voice messages
+                    await bot.send_voice(
+                        chat_id=super_admin_id,
+                        voice=message.voice.file_id,
+                        caption=(
+                            f"@{message.from_user.username or message.from_user.first_name} "
+                            f"replied to {un_id}"
+                        )
+                    )
+                elif message.sticker:
+                    # Forward sticker messages
+                    await bot.send_sticker(
+                        chat_id=super_admin_id,
+                        sticker=message.sticker.file_id
+                    )
+                else:
+                    # Forward other unsupported content types as a copy
+                    await bot.copy_message(
+                        chat_id=super_admin_id,
+                        from_chat_id=message.chat.id,
+                        message_id=message.message_id
+                    )
 
             # Clear the state after sending the message
             await state.finish()
         else:
             # Handle the case where user_id is missing
-            await message.answer("User blocked the bot ⛔️")
+            await message.answer("Error: User blocked the bot ⛔️")
             await state.finish()
     except Exception as e:
         # Handle any unexpected errors
-        await message.answer("User blocked the bot ⛔️")
+        await message.answer(f"Error ⛔️")
         await state.finish()
+
 
 
 if __name__ == "__main__":

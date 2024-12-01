@@ -10,6 +10,7 @@ from loader import dp, bot
 
 # Add buttons to the keyboard
 admin_key = ReplyKeyboardMarkup(resize_keyboard=True)
+admin_key.add(KeyboardButton(text='🔄 Reset Message IDs'))
 admin_key.add(KeyboardButton("📣 Broadcast"), KeyboardButton("📩 Send by ID"))
 admin_key.add(KeyboardButton("📊 Statistics"), KeyboardButton("👥 Manage Admins"))
 admin_key.add(KeyboardButton(text="📣 Broadcast to admins"))
@@ -44,6 +45,20 @@ cancel_admin = InlineKeyboardMarkup(
         [InlineKeyboardButton(text="❌ NO", callback_data='no')]
     ]
 )
+
+from db import reset_counter  # Import reset function from your database utilities
+
+@dp.message_handler(text="🔄 Reset Message IDs")
+async def reset_message_counter(message: types.Message):
+    super_admins = get_all_super_admins()  # Fetch the list of super admin IDs
+    if message.from_user.id in super_admins:
+        reset_counter()  # Reset the counter in the database
+        await message.answer("✅ Message IDs have been reset to start from 2")
+    else:
+        # Notify the user they don't have permission
+        pass
+
+
 
 @dp.message_handler(text="📣 Broadcast to admins")
 async def msg_all(message: types.Message, state: FSMContext):
