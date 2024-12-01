@@ -76,7 +76,7 @@ async def message_handler(message: types.Message, state: FSMContext):
             for admin_id in set(get_all_admins() + get_all_super_admins()):
                 keyboard = InlineKeyboardMarkup(row_width=1)
                 keyboard.add(
-                    InlineKeyboardButton(f"Reply to {message.from_user.first_name}", callback_data=f"reply_{user_id}")
+                    InlineKeyboardButton(f"Reply to {message.from_user.first_name}", callback_data=f"reply_{user_id}_{message.message_id}")
                     # InlineKeyboardButton(text='Get user info', callback_data=f'get_info_{user_id}')
                 )
                 await bot.copy_message(
@@ -112,10 +112,10 @@ async def reply_to_user(callback_query: types.CallbackQuery, state: FSMContext):
         cancel.add(InlineKeyboardButton(text='❌ Cancel', callback_data='cancel'))
 
         # Extract the user_id from callback data
-        user_id = callback_query.data.split("_")[1]
+        _, user_id, message_id = callback_query.data.split("_")
 
         # Save the user_id to the state
-        await state.update_data(user_id=user_id)
+        await state.update_data(user_id=user_id, message_id=message_id)
 
         # Set the state for getting the answer
         await state.set_state('get_answer')
@@ -141,16 +141,27 @@ async def send_reply(message: types.Message, state: FSMContext):
         # Retrieve the user_id from the state
         data = await state.get_data()
         user_id = data.get("user_id")
+        message_id = data.get("message_id")
 
         if user_id:
             # Copy the admin's reply to the user
             await bot.copy_message(
                 chat_id=user_id,
                 from_chat_id=message.chat.id,
-                message_id=message.message_id
+                message_id=message.message_id,
+                reply_to_message_id=int(message_id)
             )
             # Notify the admin that the reply was sent
             await message.answer("Sent successfully ❇️")
+
+            for super_admin_id in get_all_super_admins():
+                await bot.send_message(
+                    chat_id=super_admin_id,
+                    text=(
+                        f"@{message.from_user.username or message.from_user.first_name} "
+                        f"replied to {user_id}:\n\n{message.text}"
+                    )
+                )
 
             # Clear the state after sending the message
             await state.finish()
